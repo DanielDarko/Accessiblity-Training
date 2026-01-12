@@ -91,7 +91,6 @@
 
       // Cap DPR for sharpness without blowing up memory on phones
       const rawDPR = window.devicePixelRatio || 1;
-      const cappedDPR = isMobile ? Math.min(1.5, rawDPR) : Math.min(2, rawDPR);
 
       const config = {
         arguments: [],
