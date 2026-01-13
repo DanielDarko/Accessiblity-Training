@@ -37,7 +37,6 @@
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
-      <!-- No fixed width/height attributes → Unity controls buffer size -->
       <canvas id="unity-canvas" tabindex="-1"></canvas>
 
       <div id="unity-loading-bar">
@@ -48,7 +47,6 @@
       </div>
 
       <div id="unity-warning"></div>
-      <!-- Fullscreen button intentionally removed -->
     </div>
 
     <script>
@@ -85,12 +83,15 @@
 
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-      // Tokenized build file names — Unity fills these at build time
       const buildUrl  = "Build";
       const loaderUrl = buildUrl + "/Accessiblity-Training.loader.js";
 
       // Cap DPR for sharpness without blowing up memory on phones
-      const rawDPR = window.devicePixelRatio || 1;
+      function getCappedDPR() {
+        const rawDPR = window.devicePixelRatio || 1;
+        // 2 is a good “retina-ish” cap; tweak to 1.5 if you need more performance.
+        return Math.min(rawDPR, 2);
+      }
 
       const config = {
         arguments: [],
@@ -103,9 +104,9 @@
         productVersion: "1.0.0",
         showBanner: unityShowBanner,
 
-        // Sharper fullscreen: let Unity match buffer to canvas size * DPR cap
+        // Let Unity render at canvas size * devicePixelRatio
         matchWebGLToCanvasSize: true,
-        devicePixelRatio: cappedDPR
+        devicePixelRatio: getCappedDPR()
       };
 
       // Mobile viewport meta (Unity default behavior)
@@ -118,24 +119,30 @@
         canvas.className = "unity-mobile";
       }
 
-      // Fill page (Unity handles buffer size because matchWebGLToCanvasSize:true)
       function resizeCanvas() {
+        // Keep CSS size full screen
         canvas.style.width = "100%";
         canvas.style.height = "100%";
+
+        // IMPORTANT: update DPR on rotate/resize (some mobile browsers change DPR / viewport)
+        config.devicePixelRatio = getCappedDPR();
       }
+
       window.addEventListener('resize', resizeCanvas);
+      window.addEventListener('orientationchange', resizeCanvas);
       resizeCanvas();
 
       loadingBar.style.display = "block";
 
-      // Load the Unity loader
       const script = document.createElement("script");
       script.src = loaderUrl;
+
       script.onload = () => {
         createUnityInstance(canvas, config, (progress) => {
           progressBarFull.style.width = (100 * progress) + "%";
         }).then((unityInstance) => {
           loadingBar.style.display = "none";
+
           canvas.addEventListener("webglcontextlost", (e) => {
             e.preventDefault();
             unityShowBanner("WebGL context lost. The page may be out of memory. Try reloading.", "error");
@@ -144,9 +151,11 @@
           unityShowBanner(message, "error");
         });
       };
+
       script.onerror = () => {
         unityShowBanner("Failed to load the Unity loader script.", "error");
       };
+
       document.body.appendChild(script);
     </script>
   </body>
