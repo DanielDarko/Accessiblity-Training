@@ -17,6 +17,7 @@
         touch-action: none;
         -webkit-user-select: none;
         -webkit-touch-callout: none;
+        background: #000;
       }
       #unity-container {
         position: relative;
@@ -24,7 +25,7 @@
         height: 100%;
         background: #000;
       }
-      /* Canvas fills page; actual backbuffer will match CSS size * capped DPR */
+      /* Canvas fills page; internal resolution controlled by DPR cap for performance */
       #unity-canvas {
         width: 100%;
         height: 100%;
@@ -86,11 +87,23 @@
       const buildUrl  = "Build";
       const loaderUrl = buildUrl + "/Accessiblity-Training.loader.js";
 
-      // Cap DPR for sharpness without blowing up memory on phones
+      // Optional URL override: ?dpr=1.25 (great for testing performance quickly)
+      function getUrlDprOverride() {
+        const params = new URLSearchParams(location.search);
+        const v = parseFloat(params.get("dpr"));
+        return Number.isFinite(v) && v > 0 ? v : null;
+      }
+
+      // Performance-first DPR cap:
+      // - Mobile default: 1.25 (big FPS win vs 2.0)
+      // - Desktop default: 2.0
       function getCappedDPR() {
-        const rawDPR = window.devicePixelRatio || 1;
-        // 2 is a good “retina-ish” cap; tweak to 1.5 if you need more performance.
-        return Math.min(rawDPR, 2);
+        const raw = window.devicePixelRatio || 1;
+        const override = getUrlDprOverride();
+        if (override) return Math.max(0.75, Math.min(override, 2));
+
+        const cap = isMobile ? 1.25 : 2.0;   // bump mobile to 1.5 if you want a bit sharper
+        return Math.min(raw, cap);
       }
 
       const config = {
@@ -104,32 +117,57 @@
         productVersion: "1.0.0",
         showBanner: unityShowBanner,
 
-        // Let Unity render at canvas size * devicePixelRatio
+        // Match backbuffer to CSS canvas size * DPR.
         matchWebGLToCanvasSize: true,
-        devicePixelRatio: getCappedDPR()
+        devicePixelRatio: getCappedDPR(),
+
+        // WebGL context hints (mobile FPS + memory):
+        // - antialias off on mobile is often a LARGE win
+        // - preserveDrawingBuffer false improves perf/memory
+        // - powerPreference requests faster GPU path where supported
+        webglContextAttributes: {
+          alpha: false,
+          antialias: !isMobile,              // mobile: false for FPS
+          depth: true,
+          stencil: false,
+          premultipliedAlpha: false,
+          preserveDrawingBuffer: false,
+          powerPreference: "high-performance"
+        }
       };
 
-      // Mobile viewport meta (Unity default behavior)
+      // Mobile viewport meta (use height=device-height to reduce URL bar layout weirdness)
       if (isMobile) {
         const meta = document.createElement('meta');
         meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=yes, viewport-fit=cover';
         document.head.appendChild(meta);
         document.querySelector("#unity-container").className = "unity-mobile";
         canvas.className = "unity-mobile";
       }
 
-      function resizeCanvas() {
-        // Keep CSS size full screen
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
+      // Use visualViewport where possible to avoid extra resize churn and keep true usable height.
+      function getViewportHeight() {
+        return window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      }
 
-        // IMPORTANT: update DPR on rotate/resize (some mobile browsers change DPR / viewport)
-        config.devicePixelRatio = getCappedDPR();
+      let resizeRaf = 0;
+      function resizeCanvas() {
+        if (resizeRaf) cancelAnimationFrame(resizeRaf);
+        resizeRaf = requestAnimationFrame(() => {
+          // Keep CSS size full screen; in mobile use visual viewport height for stability.
+          canvas.style.width = "100%";
+          canvas.style.height = isMobile ? (getViewportHeight() + "px") : "100%";
+
+          // Update DPR for the next context sizing decisions Unity makes.
+          // (Unity reads this when resizing the backbuffer)
+          config.devicePixelRatio = getCappedDPR();
+        });
       }
 
       window.addEventListener('resize', resizeCanvas);
       window.addEventListener('orientationchange', resizeCanvas);
+      if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeCanvas);
       resizeCanvas();
 
       loadingBar.style.display = "block";
@@ -147,6 +185,9 @@
             e.preventDefault();
             unityShowBanner("WebGL context lost. The page may be out of memory. Try reloading.", "error");
           }, false);
+
+          // One more resize after Unity starts (helps iOS after address bar settles)
+          setTimeout(resizeCanvas, 150);
         }).catch((message) => {
           unityShowBanner(message, "error");
         });
