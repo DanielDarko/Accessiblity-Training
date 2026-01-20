@@ -90,7 +90,7 @@
       function getCappedDPR() {
         const rawDPR = window.devicePixelRatio || 1;
         // 2 is a good “retina-ish” cap; tweak to 1.5 if you need more performance.
-        return Math.min(rawDPR, 1.2);
+        return Math.min(rawDPR, 2);
       }
 
       const config = {
