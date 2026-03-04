@@ -6,195 +6,302 @@
     <title>Unity Web Player | Accessibility Training Tool</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico" />
     <link rel="stylesheet" href="TemplateData/style.css" />
-    <style>
-      html, body {
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        height: 100%;
-        width: 100%;
-        overscroll-behavior: none;
-        touch-action: none;
-        -webkit-user-select: none;
-        -webkit-touch-callout: none;
-      }
 
-      #unity-container {
-        position: relative;
-        width: 100%;
-        height: 100%;
-        background: #000;
-      }
+<style>
 
-      #unity-canvas {
-        width: 100%;
-        height: 100%;
-        display: block;
-        background: #000;
-        touch-action: none;
-      }
+html, body {
+  margin:0;
+  padding:0;
+  overflow:hidden;
+  height:100%;
+  width:100%;
+  overscroll-behavior:none;
+  touch-action:none;
+  -webkit-user-select:none;
+  -webkit-touch-callout:none;
+}
 
-      #unity-footer { display: none; }
+#unity-container {
+  position:relative;
+  width:100%;
+  height:100%;
+  background:#000;
+}
 
-      /* Scenario switcher UI */
-      #scenario-menu {
-        position: absolute;
-        top: 12px;
-        left: 12px;
-        z-index: 9999;
-        display: flex;
-        gap: 8px;
-        background: rgba(0,0,0,0.6);
-        padding: 8px;
-        border-radius: 8px;
-        backdrop-filter: blur(6px);
-      }
+#unity-canvas {
+  width:100%;
+  height:100%;
+  display:block;
+  background:#000;
+}
 
-      #scenario-menu button {
-        background: #1f1f1f;
-        border: none;
-        color: white;
-        padding: 8px 12px;
-        border-radius: 6px;
-        font-size: 14px;
-        cursor: pointer;
-      }
+#unity-footer { display:none; }
 
-      #scenario-menu button:hover {
-        background: #3a3a3a;
-      }
 
-    </style>
+/* SCENARIO BUTTON PANEL */
+
+#scenario-panel {
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%, -50%);
+  text-align:center;
+  z-index:9999;
+}
+
+#scenario-panel h2 {
+  color:white;
+  font-family:Arial;
+  margin-bottom:25px;
+  font-size:24px;
+}
+
+.scenario-btn {
+
+  display:block;
+  width:260px;
+  margin:12px auto;
+
+  padding:16px 20px;
+  font-size:18px;
+
+  border:none;
+  border-radius:10px;
+
+  cursor:pointer;
+
+  background:#9A192C;
+  color:white;
+
+  transition:all .15s ease;
+}
+
+.scenario-btn:hover {
+  background:#b01d33;
+}
+
+.scenario-btn:active {
+  transform:scale(.98);
+}
+
+</style>
+
   </head>
 
-  <body>
-    <div id="unity-container" class="unity-desktop">
 
-      <!-- Scenario Switch Buttons -->
-      <div id="scenario-menu">
-        <button onclick="window.location.href='driver.html'">
-          Driver Scenario
-        </button>
+<body>
 
-        <button onclick="window.location.href='wheelchair.html'">
-          Wheelchair Scenario
-        </button>
-      </div>
+<div id="unity-container" class="unity-desktop">
 
-      <canvas id="unity-canvas" tabindex="-1"></canvas>
+<!-- SCENARIO BUTTONS -->
+<div id="scenario-panel">
 
-      <div id="unity-loading-bar">
-        <div id="unity-logo"></div>
-        <div id="unity-progress-bar-empty">
-          <div id="unity-progress-bar-full"></div>
-        </div>
-      </div>
+<h2>Select Scenario</h2>
 
-      <div id="unity-warning"></div>
-    </div>
+<button class="scenario-btn"
+onclick="window.location.href='./driver_scenario.html'">
 
-    <script>
-      const canvas = document.querySelector("#unity-canvas");
-      const loadingBar = document.querySelector("#unity-loading-bar");
-      const progressBarFull = document.querySelector("#unity-progress-bar-full");
-      const warningBanner = document.querySelector("#unity-warning");
+Driver Scenario
 
-      document.addEventListener('touchstart', (e) => {
-        if (e.target.closest('#unity-canvas')) e.preventDefault();
-      }, { passive: false });
+</button>
 
-      document.addEventListener('touchmove', (e) => {
-        if (e.target.closest('#unity-canvas')) e.preventDefault();
-      }, { passive: false });
 
-      function unityShowBanner(msg, type) {
-        function updateBannerVisibility() {
-          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
-        }
-        const div = document.createElement('div');
-        div.innerHTML = msg;
-        if (type === 'error') div.style = 'background: red; padding: 10px;';
-        else {
-          if (type === 'warning') div.style = 'background: yellow; padding: 10px;';
-          setTimeout(() => {
-            warningBanner.removeChild(div);
-            updateBannerVisibility();
-          }, 5000);
-        }
-        warningBanner.appendChild(div);
-        updateBannerVisibility();
-      }
+<button class="scenario-btn"
+onclick="window.location.href='./wheelchair_scenario.html'">
 
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+Wheelchair Scenario
 
-      const buildUrl  = "Build";
-      const loaderUrl = buildUrl + "/Accessiblity-Training.loader.js";
+</button>
 
-      function getCappedDPR() {
-        const rawDPR = window.devicePixelRatio || 1;
-        return Math.min(rawDPR, 1.5);
-      }
+</div>
 
-      const config = {
-        arguments: [],
-        dataUrl:      buildUrl + "/Accessiblity-Training.data.unityweb",
-        frameworkUrl: buildUrl + "/Accessiblity-Training.framework.js.unityweb",
-        codeUrl:      buildUrl + "/Accessiblity-Training.wasm.unityweb",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "Bus Éireann",
-        productName: "Accessibility Training Tool",
-        productVersion: "1.0.0",
-        showBanner: unityShowBanner,
 
-        matchWebGLToCanvasSize: true,
-        devicePixelRatio: getCappedDPR()
-      };
+<canvas id="unity-canvas" tabindex="-1"></canvas>
 
-      if (isMobile) {
-        const meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.head.appendChild(meta);
-        document.querySelector("#unity-container").className = "unity-mobile";
-        canvas.className = "unity-mobile";
-      }
 
-      function resizeCanvas() {
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
-        config.devicePixelRatio = getCappedDPR();
-      }
+<div id="unity-loading-bar">
 
-      window.addEventListener('resize', resizeCanvas);
-      window.addEventListener('orientationchange', resizeCanvas);
-      resizeCanvas();
+<div id="unity-logo"></div>
 
-      loadingBar.style.display = "block";
+<div id="unity-progress-bar-empty">
+<div id="unity-progress-bar-full"></div>
+</div>
 
-      const script = document.createElement("script");
-      script.src = loaderUrl;
+</div>
 
-      script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          progressBarFull.style.width = (100 * progress) + "%";
-        }).then((unityInstance) => {
-          loadingBar.style.display = "none";
+<div id="unity-warning"></div>
 
-          canvas.addEventListener("webglcontextlost", (e) => {
-            e.preventDefault();
-            unityShowBanner("WebGL context lost. The page may be out of memory. Try reloading.", "error");
-          }, false);
+</div>
 
-        }).catch((message) => {
-          unityShowBanner(message, "error");
-        });
-      };
 
-      script.onerror = () => {
-        unityShowBanner("Failed to load the Unity loader script.", "error");
-      };
 
-      document.body.appendChild(script);
-    </script>
-  </body>
+<script>
+
+const canvas = document.querySelector("#unity-canvas");
+const loadingBar = document.querySelector("#unity-loading-bar");
+const progressBarFull = document.querySelector("#unity-progress-bar-full");
+const warningBanner = document.querySelector("#unity-warning");
+
+
+document.addEventListener('touchstart', (e) => {
+  if (e.target.closest('#unity-canvas')) e.preventDefault();
+}, { passive:false });
+
+document.addEventListener('touchmove', (e) => {
+  if (e.target.closest('#unity-canvas')) e.preventDefault();
+}, { passive:false });
+
+
+function unityShowBanner(msg, type) {
+
+function updateBannerVisibility() {
+  warningBanner.style.display =
+  warningBanner.children.length ? 'block' : 'none';
+}
+
+const div = document.createElement('div');
+
+div.innerHTML = msg;
+
+if (type === 'error')
+  div.style = 'background:red; padding:10px;';
+else {
+
+  if (type === 'warning')
+  div.style = 'background:yellow; padding:10px;';
+
+  setTimeout(() => {
+    warningBanner.removeChild(div);
+    updateBannerVisibility();
+  }, 5000);
+
+}
+
+warningBanner.appendChild(div);
+updateBannerVisibility();
+
+}
+
+
+
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+const buildUrl  = "Build";
+const loaderUrl = buildUrl + "/Accessiblity-Training.loader.js";
+
+
+function getCappedDPR(){
+
+const rawDPR = window.devicePixelRatio || 1;
+
+return Math.min(rawDPR, 1.5);
+
+}
+
+
+const config = {
+
+arguments: [],
+
+dataUrl:      buildUrl + "/Accessiblity-Training.data.unityweb",
+frameworkUrl: buildUrl + "/Accessiblity-Training.framework.js.unityweb",
+codeUrl:      buildUrl + "/Accessiblity-Training.wasm.unityweb",
+
+streamingAssetsUrl: "StreamingAssets",
+
+companyName: "Bus Éireann",
+productName: "Accessibility Training Tool",
+productVersion: "1.0.0",
+
+showBanner: unityShowBanner,
+
+matchWebGLToCanvasSize: true,
+devicePixelRatio: getCappedDPR()
+
+};
+
+
+if (isMobile){
+
+const meta = document.createElement('meta');
+
+meta.name = 'viewport';
+
+meta.content =
+'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+
+document.head.appendChild(meta);
+
+document.querySelector("#unity-container").className = "unity-mobile";
+canvas.className = "unity-mobile";
+
+}
+
+
+function resizeCanvas(){
+
+canvas.style.width = "100%";
+canvas.style.height = "100%";
+
+config.devicePixelRatio = getCappedDPR();
+
+}
+
+
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', resizeCanvas);
+
+resizeCanvas();
+
+
+loadingBar.style.display = "block";
+
+
+const script = document.createElement("script");
+
+script.src = loaderUrl;
+
+
+script.onload = () => {
+
+createUnityInstance(canvas, config, (progress) => {
+
+progressBarFull.style.width = (100 * progress) + "%";
+
+}).then((unityInstance) => {
+
+loadingBar.style.display = "none";
+
+canvas.addEventListener("webglcontextlost", (e) => {
+
+e.preventDefault();
+
+unityShowBanner(
+"WebGL context lost. The page may be out of memory. Try reloading.",
+"error"
+);
+
+}, false);
+
+}).catch((message) => {
+
+unityShowBanner(message, "error");
+
+});
+
+};
+
+
+script.onerror = () => {
+
+unityShowBanner("Failed to load the Unity loader script.", "error");
+
+};
+
+
+document.body.appendChild(script);
+
+</script>
+
+</body>
 </html>
