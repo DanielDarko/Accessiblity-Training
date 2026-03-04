@@ -18,14 +18,13 @@
         -webkit-user-select: none;
         -webkit-touch-callout: none;
       }
-
       #unity-container {
         position: relative;
         width: 100%;
         height: 100%;
         background: #000;
       }
-
+      /* Canvas fills page; actual backbuffer will match CSS size * capped DPR */
       #unity-canvas {
         width: 100%;
         height: 100%;
@@ -33,54 +32,11 @@
         background: #000;
         touch-action: none;
       }
-
       #unity-footer { display: none; }
-
-      /* Scenario switcher UI */
-      #scenario-menu {
-        position: absolute;
-        top: 12px;
-        left: 12px;
-        z-index: 9999;
-        display: flex;
-        gap: 8px;
-        background: rgba(0,0,0,0.6);
-        padding: 8px;
-        border-radius: 8px;
-        backdrop-filter: blur(6px);
-      }
-
-      #scenario-menu button {
-        background: #1f1f1f;
-        border: none;
-        color: white;
-        padding: 8px 12px;
-        border-radius: 6px;
-        font-size: 14px;
-        cursor: pointer;
-      }
-
-      #scenario-menu button:hover {
-        background: #3a3a3a;
-      }
-
     </style>
   </head>
-
   <body>
     <div id="unity-container" class="unity-desktop">
-
-      <!-- Scenario Switch Buttons -->
-      <div id="scenario-menu">
-        <button onclick="window.location.href='driver.html'">
-          Driver Scenario
-        </button>
-
-        <button onclick="window.location.href='wheelchair.html'">
-          Wheelchair Scenario
-        </button>
-      </div>
-
       <canvas id="unity-canvas" tabindex="-1"></canvas>
 
       <div id="unity-loading-bar">
@@ -99,10 +55,10 @@
       const progressBarFull = document.querySelector("#unity-progress-bar-full");
       const warningBanner = document.querySelector("#unity-warning");
 
+      // Prevent iOS gestures from interfering with the canvas
       document.addEventListener('touchstart', (e) => {
         if (e.target.closest('#unity-canvas')) e.preventDefault();
       }, { passive: false });
-
       document.addEventListener('touchmove', (e) => {
         if (e.target.closest('#unity-canvas')) e.preventDefault();
       }, { passive: false });
@@ -130,8 +86,10 @@
       const buildUrl  = "Build";
       const loaderUrl = buildUrl + "/Accessiblity-Training.loader.js";
 
+      // Cap DPR for sharpness without blowing up memory on phones
       function getCappedDPR() {
         const rawDPR = window.devicePixelRatio || 1;
+        // 2 is a good “retina-ish” cap; tweak to 1.5 if you need more performance.
         return Math.min(rawDPR, 1.5);
       }
 
@@ -146,10 +104,12 @@
         productVersion: "1.0.0",
         showBanner: unityShowBanner,
 
+        // Let Unity render at canvas size * devicePixelRatio
         matchWebGLToCanvasSize: true,
         devicePixelRatio: getCappedDPR()
       };
 
+      // Mobile viewport meta (Unity default behavior)
       if (isMobile) {
         const meta = document.createElement('meta');
         meta.name = 'viewport';
@@ -160,8 +120,11 @@
       }
 
       function resizeCanvas() {
+        // Keep CSS size full screen
         canvas.style.width = "100%";
         canvas.style.height = "100%";
+
+        // IMPORTANT: update DPR on rotate/resize (some mobile browsers change DPR / viewport)
         config.devicePixelRatio = getCappedDPR();
       }
 
@@ -179,12 +142,12 @@
           progressBarFull.style.width = (100 * progress) + "%";
         }).then((unityInstance) => {
           loadingBar.style.display = "none";
+	  unityInstance.SendMessage("Boot", "LoadFromWeb", "Accessibility_Wheelchair_Scenario");
 
           canvas.addEventListener("webglcontextlost", (e) => {
             e.preventDefault();
             unityShowBanner("WebGL context lost. The page may be out of memory. Try reloading.", "error");
           }, false);
-
         }).catch((message) => {
           unityShowBanner(message, "error");
         });
